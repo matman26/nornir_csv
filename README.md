@@ -45,7 +45,7 @@ By default, the plugin will look for the files hosts.csv, groups.csv and default
 
 ```yaml
 inventory:
-  plugin: CsvInventory
+  plugin: CsvInventoryPlugin
   options:
     inventory_dir_path: /path/to/inventory/dir/
 runner:
