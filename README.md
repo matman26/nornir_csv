@@ -1,4 +1,6 @@
 # nornir_csv
+[![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/matman26/nornir_csv)
+
 Use CSV files as a Nornir Inventory source with hosts, groups and defaults.
 This can be used as an equivalent to the Simple Inventory plugin but 
 using CSV files instead of YAML. This does not generate any new files,
@@ -19,27 +21,37 @@ git clone https://github.com/matman26/nornir_csv.git
 The nornir_csv directory can then be copied to your project root and added
 as an external library.
 
+```
+cp nornir_csv/nornir_csv /destination/project/root
+```
+
 ## Usage
 Since this is an external plugin for Nornir 3.0+, it must be registered
 before usage. The main project file must therefore contain something similar to:
 
 ```python
 from nornir import InitNornir
-from csv_inventory import CsvInventory
+from nornir_csv.plugins.inventory.csv_inventory import CsvInventory
 from nornir.core.plugins.inventory import InventoryPluginRegister
 
 InventoryPluginRegister.register("CsvInventoryPlugin", CsvInventory)
 
-nr = InitNornir(config_file='sample_config.yaml)
+nr = InitNornir(config_file='sample_config.yaml')
 ```
 
-By default, the plugin will look for the files hosts.csv, groups.csv and defaults.csv inside the ./inventory/ directory, but the directory can be changed by specifying the plugin option `inventory_dir_path`. A sample file such as below can be used:
+By default, the plugin will look for the files hosts.csv, groups.csv and defaults.csv inside the 
+./inventory/ directory, but the directory can be changed by specifying the plugin option 
+`inventory_dir_path`. A sample file such as below can be used:
 
 ```yaml
 inventory:
   plugin: CsvInventory
   options:
     inventory_dir_path: /path/to/inventory/dir/
+runner:
+  plugin: threaded
+  options:
+    num_workers: 20
 ```
 
 The name of the csv files to be read for hosts, groups and defaults can also be customized by setting the options `hosts_file`, `groups_file` and `defaults_file`, respectively. These should correspond to the file's basenames (no paths) with extension, if any.
@@ -75,9 +87,10 @@ groups 'core' and 'main'. A hosts file is mandatory.
 ### Groups
 The `groups_file` is optional. It can be used to set 
 default values for the base attributes of each host (for example, if every host of the same
-groups uses the same credentials). Any attributes that are non-base attributes will
-be added to the 'data' container inside the generated group, similar two how it 
-behaves with hosts. The groups file is optional.
+group uses the same credentials). Any attributes that are non-base attributes will
+be added to the 'data' container inside the generated group, similar to how it 
+behaves with hosts. If no groups are specified in the csv file, hosts can still be assigned 
+to groups but these will hold no data.
 
 ```csv
 name,username,password,dns_server
@@ -85,8 +98,7 @@ core,cisco,cisco,8.8.8.8
 main,,,,
 ```
 
-Note that no fields are mandatory, but groups must be referenced in the CSV file if they
-are assigned to a host.
+Notice that the groups csv does not have any mandatory fields.
 
 ### Defaults
 The `defaults_file` specifies any default variables. This file is also free-form, but is only 
@@ -94,6 +106,6 @@ composed of two lines: a header with the name of the variable and a second line 
 its value. The defaults file is optional.
 
 ```csv
-message_of_the_day,foo,fish
-hello world!,bar,ball
+message_of_the_day,foo,port
+hello world!,bar,22
 ```
