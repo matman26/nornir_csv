@@ -5,8 +5,12 @@ from nornir.core.inventory import (Inventory,
                                    Hosts,
                                    Host,
                                    Groups,
-                                   Group)
-from typing import List, Dict, Any
+                                   Group,
+                                   Defaults,
+                                   BaseAttributes)
+from typing import List, Dict, Tuple, Any
+
+attributes = BaseAttributes.__slots__
 
 class CsvInventory:
     def __init__(self, inventory_dir_path: str = "./inventory") -> None:
@@ -25,23 +29,29 @@ class CsvInventory:
             dict_list = list(dict_reader)
         return dict_list
 
-    def _get_hosts(self) -> Hosts:
+    def _get_hosts_and_groups(self) -> Tuple[Hosts, Groups]:
         host_list = self._csv_to_dictlist(
             os.path.join(self.inventory_dir_path,
                          'hosts.csv'))
         hosts_data = Hosts({
             item['name'] : Host(**item) for item in host_list })
-        return Hosts(**hosts_data)
+        return Hosts(**hosts_data), Groups()
 
-    def _groups_dict_to_groupobject(self, groups_dict: Dict[Any,Any]) -> Groups:
-        print(groups_dict)
-        return Groups()
+    def _get_defaults(self) -> Defaults:
+        defaults = self._csv_to_dictlist(
+            os.path.join(self.inventory_dir_path,
+                         'defaults.csv'))[0]
+        defaults_dict = {}
+        for item in attributes:
+            if item in defaults.keys():
+                defaults_dict[item] = defaults[item]
+                defaults.pop(item)
+        defaults_dict['data'] = {**defaults}
+        return Defaults(**defaults_dict)
 
-    def _load_defaults_file(self, defaults_file_name: str) -> Dict[str, Any]:
-        print(defaults_file_name)
-        return {}
-
-    def load() -> Inventory:
+    def load(self) -> Inventory:
         # Load data from three csv files as dict (hosts, groups,defaults)
+        hosts, groups = self._get_hosts_and_groups()
+        defaults = self._get_defaults()
         # Pass dict to their respective function, generate Hosts, Groups and Defaults objects.
-        return Inventory(hosts=Hosts(), groups=Groups())
+        return Inventory(hosts=hosts, groups=groups, defaults=defaults)
