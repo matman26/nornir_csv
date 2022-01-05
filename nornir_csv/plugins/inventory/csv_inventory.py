@@ -32,10 +32,15 @@ class CsvInventory:
 
     def _csv_to_dictlist(self, csv_file_name: str) -> List[Dict]:
         """Return list of dictionaries with data from csv file."""
-        print(f"Opening file {csv_file_name}")
-        with open(csv_file_name,'r') as _f:
-            dict_reader = csv.DictReader(_f)
-            dict_list = list(dict_reader)
+        try:
+            with open(csv_file_name,'r') as _f:
+                dict_reader = csv.DictReader(_f)
+                dict_list = list(dict_reader)
+        except FileNotFoundError:
+            dict_list = [{}]
+        except Exception as e:
+            raise e
+
         return dict_list
 
     def _read_groups_from_string(self, groupstring: str) -> List[str]:
@@ -47,6 +52,10 @@ class CsvInventory:
         host_list = self._csv_to_dictlist(
             os.path.join(self.inventory_dir_path,
                          self.hosts_file))
+
+        if host_list == []:
+            raise Exception("NoHostsDefined")
+
         # Convert group string (space-separated) into group list for all hosts
         host_groupslist = []
         for host in host_list:
@@ -58,19 +67,37 @@ class CsvInventory:
         hosts_data = Hosts({
             item['name'] : Host(**item) for item in host_list })
 
-        # Enforce unicity
+        # Enforce unicity as initial list can contain duplicates
+        host_groupslist = list(set(host_groupslist))
+
+        # Gather groups from CSV file
         group_list = self._csv_to_dictlist(
             os.path.join(self.inventory_dir_path,
                          self.groups_file))
 
         groups_data = Groups()
-        for group in group_list:
-            data_attributes = {}
-            group_name = group['name']
-            for attribute in list(group.keys()):
-                if attribute not in base_attributes:
-                    data_attributes[attribute] = group.pop(attribute)
-            groups_data[group_name] =  Group(name=group_name, **group, data={**data_attributes})
+        # Check if any groups were read from csv file
+        if group_list == [{}]:
+            # Check if any group was read from a host instead of the csv
+            if host_groupslist == []:
+                # If no grouplist was found on hosts, there are no groups defined.
+                pass
+            else:
+                # If a grouplist was found from hosts, simply populate their names without any
+                # other attributes
+                for group in host_groupslist:
+                    groups_data[group] = Group(name=group)
+        else:
+            # If groups were read, do some dict unpacking to pass attributes to the Group class,
+            # build Groups dict
+            groups_data = Groups()
+            for group in group_list:
+                data_attributes = {}
+                group_name = group['name']
+                for attribute in list(group.keys()):
+                    if attribute not in base_attributes:
+                        data_attributes[attribute] = group.pop(attribute)
+                groups_data[group_name] =  Group(name=group_name, **group, data={**data_attributes})
         return hosts_data, groups_data
 
     def _get_defaults(self) -> Defaults:
@@ -78,11 +105,13 @@ class CsvInventory:
             os.path.join(self.inventory_dir_path,
                          self.defaults_file))[0]
         defaults_dict = {}
-        for item in base_attributes:
-            if item in defaults.keys():
-                defaults_dict[item] = defaults[item]
-                defaults.pop(item)
-        defaults_dict['data'] = {**defaults}
+        # Check if defaults file is not empty
+        if defaults != []:
+            for item in base_attributes:
+                if item in defaults.keys():
+                    defaults_dict[item] = defaults[item]
+                    defaults.pop(item)
+            defaults_dict['data'] = {**defaults}
         return Defaults(**defaults_dict)
 
     def load(self) -> Inventory:
