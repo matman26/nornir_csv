@@ -98,7 +98,7 @@ core,cisco,cisco,8.8.8.8
 main,,,,
 ```
 
-Notice that the groups csv does not have any mandatory fields.
+Notice that the groups csv does not have any mandatory fields other than name.
 
 ### Defaults
 The `defaults_file` specifies any default variables. This file is also free-form, but is only 
