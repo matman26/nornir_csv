@@ -30,8 +30,70 @@ from nornir.core.plugins.inventory import InventoryPluginRegister
 
 InventoryPluginRegister.register("CsvInventoryPlugin", CsvInventory)
 
-nr = InitNornir(inventory={'plugin': 'CsvInventoryPlugin'},
-                runner={'plugin': 'threaded','options': {'num_workers': 20}})
+nr = InitNornir(config_file='sample_config.yaml)
 ```
 
-By default, the plugin will look for the files hosts.csv, groups.csv and defaults.csv inside the ./inventory/ directory, but the directory can be changed by specifying the plugin option `inventory_dir_path`
+By default, the plugin will look for the files hosts.csv, groups.csv and defaults.csv inside the ./inventory/ directory, but the directory can be changed by specifying the plugin option `inventory_dir_path`. A sample file such as below can be used:
+
+```yaml
+inventory:
+  plugin: CsvInventory
+  options:
+    inventory_dir_path: /path/to/inventory/dir/
+```
+
+The name of the csv files to be read for hosts, groups and defaults can also be customized by setting the options `hosts_file`, `groups_file` and `defaults_file`, respectively. These should correspond to the file's basenames (no paths) with extension, if any.
+
+## CSV Syntax
+### Hosts
+The `hosts_file` follows a specific syntax to make it nornir-compatible, see sample below:
+```csv
+name,hostname,username,password,port,platform,groups,custom_var
+R1,192.168.122.10,cisco,cisco,22,cisco_ios,core main,foo
+R2,192.168.122.20,cisco,cisco,22,cisco_xr,,bar
+```
+
+Note that name, hostname, username, password, port, platform and groups are nornir
+base attributes. This means they are hosts attributes directly, such that
+```python
+nr.inventory.hosts['R1'].password
+```
+
+will yield the return value of 'cisco' as expected. Any custom variables that are
+added will be put inside the 'data' dictionary on the target host. So
+
+```python
+nr.inventory.hosts['R1'].data['custom_var']
+```
+
+will return 'foo'.
+
+Notice also that to specify the list of groups to which a host belongs the list must be 
+specified one group at a time, separated by spaces. In the csv above, R1 belongs to the
+groups 'core' and 'main'. A hosts file is mandatory.
+
+### Groups
+The `groups_file` is optional. It can be used to set 
+default values for the base attributes of each host (for example, if every host of the same
+groups uses the same credentials). Any attributes that are non-base attributes will
+be added to the 'data' container inside the generated group, similar two how it 
+behaves with hosts. The groups file is optional.
+
+```csv
+name,username,password,dns_server
+core,cisco,cisco,8.8.8.8
+main,,,,
+```
+
+Note that no fields are mandatory, but groups must be referenced in the CSV file if they
+are assigned to a host.
+
+### Defaults
+The `defaults_file` specifies any default variables. This file is also free-form, but is only 
+composed of two lines: a header with the name of the variable and a second line with 
+its value. The defaults file is optional.
+
+```csv
+message_of_the_day,foo,fish
+hello world!,bar,ball
+```
