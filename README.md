@@ -31,7 +31,7 @@ before usage. The main project file must therefore contain something similar to:
 
 ```python
 from nornir import InitNornir
-from nornir_csv.plugins.inventory.csv_inventory import CsvInventory
+from nornir_csv.plugins.inventory import CsvInventory
 from nornir.core.plugins.inventory import InventoryPluginRegister
 
 InventoryPluginRegister.register("CsvInventoryPlugin", CsvInventory)
