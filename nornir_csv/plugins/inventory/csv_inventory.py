@@ -10,6 +10,7 @@ from nornir.core.inventory import (Inventory,
                                    BaseAttributes)
 from typing import List, Dict, Tuple, Any
 
+
 base_attributes = BaseAttributes.__slots__
 
 class CsvInventory:
@@ -24,12 +25,6 @@ class CsvInventory:
         self.groups_file = groups_file
         self.defaults_file = defaults_file
 
-    # FIXME This could be a lambda but I'll leave it as a function for now
-    def _pop_dict_return(self,in_dict: Dict, key: str) -> Dict:
-        copied = in_dict.copy()
-        copied.pop(key)
-        return copied
-
     def _csv_to_dictlist(self, csv_file_name: str) -> List[Dict]:
         """Return list of dictionaries with data from csv file."""
         try:
@@ -40,7 +35,6 @@ class CsvInventory:
             dict_list = [{}]
         except Exception as e:
             raise e
-
         return dict_list
 
     def _read_groups_from_string(self, groupstring: str) -> List[str]:
@@ -48,11 +42,17 @@ class CsvInventory:
         grouplist = groupstring.strip().split(' ')
         return grouplist
 
+    # FIXME This could be a lambda but I'll leave it as a function for now
+    def _pop_dict_return(self,in_dict: Dict, key: str) -> Dict:
+        copied = in_dict.copy()
+        copied.pop(key)
+        return copied
+
+
     def _get_hosts_and_groups(self) -> Tuple[Hosts, Groups]:
         host_list = self._csv_to_dictlist(
             os.path.join(self.inventory_dir_path,
                          self.hosts_file))
-
         if host_list == []:
             raise Exception("NoHostsDefined")
 
@@ -60,12 +60,15 @@ class CsvInventory:
         host_groupslist = []
         for host in host_list:
             if host.get('groups'):
-                host['groups'] = self._read_groups_from_string(groupstring = host['groups'])
-                host_groupslist.extend(host['groups'])
+                host['groups'] = {
+                    groupname: Group(name=groupname)
+                               for groupname
+                               in self._read_groups_from_string(host['groups']) }
 
+                host_groupslist.extend(host['groups'])
+        
         # Create Hosts dict-like object (key is name, value is Host(**kwargs))
-        hosts_data = Hosts({
-            item['name'] : Host(**item) for item in host_list })
+        hosts_data = Hosts({item['name']: Host(**item) for item in host_list })
 
         # Enforce unicity as initial list can contain duplicates
         host_groupslist = list(set(host_groupslist))
@@ -120,3 +123,7 @@ class CsvInventory:
         defaults = self._get_defaults()
         # Pass dict to their respective function, generate Hosts, Groups and Defaults objects.
         return Inventory(hosts=hosts, groups=groups, defaults=defaults)
+
+
+if __name__ == '__main__':
+    pass
