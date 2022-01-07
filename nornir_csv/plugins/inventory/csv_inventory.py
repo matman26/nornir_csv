@@ -18,12 +18,14 @@ class CsvInventory:
                  inventory_dir_path: str = "./inventory",
                  hosts_file: str = "hosts.csv",
                  groups_file: str = "groups.csv",
-                 defaults_file: str = "defaults.csv"
+                 defaults_file: str = "defaults.csv",
+                 options_file: str = "connection_options.csv"
                  ) -> None:
         self.inventory_dir_path = inventory_dir_path
         self.hosts_file = hosts_file
         self.groups_file = groups_file
         self.defaults_file = defaults_file
+        self.connection_options = options_file
 
     def _csv_to_dictlist(self, csv_file_name: str) -> List[Dict]:
         """Return list of dictionaries with data from csv file."""
@@ -60,10 +62,10 @@ class CsvInventory:
         host_groupslist = []
         for host in host_list:
             if host.get('groups'):
-                host['groups'] = {
-                    groupname: Group(name=groupname)
-                               for groupname
-                               in self._read_groups_from_string(host['groups']) }
+                host['groups'] = [
+                    Group(name=groupname)
+                    for groupname
+                    in self._read_groups_from_string(host['groups']) ]
 
                 host_groupslist.extend(host['groups'])
         
