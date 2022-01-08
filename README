@@ -10,7 +10,7 @@ but instead reads host data from three files:
 + defaults.csv
 
 ## Installation
-Install the [package][https://pypi.org/project/nornir-csv/] from PyPi with pip.
+Install the [package](https://pypi.org/project/nornir-csv/) from PyPi with pip.
 
 ```
 pip install nornir-csv
