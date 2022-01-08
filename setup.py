@@ -1,11 +1,11 @@
-from distutils.core import setup
+from setuptools import setup
 setup(
   name = 'nornir_csv',
   packages = ['nornir_csv'],
-  version = '0.1.1',
+  version = '0.1.2',
   license='apache-2.0',
   description = 'CSV Inventory for nornir with hosts, groups and defaults.',
-  long_description = open('README.md','r',encoding='utf-8').read(),
+  long_description = open('README','r',encoding='utf-8').read(),
   long_description_content_type="text/markdown",
   author = 'Matheus Augusto da Silva',
   author_email = 'a.matheus26@hotmail.com',
