@@ -100,3 +100,37 @@ its value. The defaults file is optional.
 message_of_the_day,foo,port
 hello world!,bar,22
 ```
+
+## Writing Changes back to CSV
+It may be possible you want to update your inventory programatically after running some
+tests. During execution, all the hosts on your inventory are available and can be appended
+data in their 'data' dictionaries. You can also create new hosts and add existing ones to
+groups from within your Python code. In all of these cases, you can use the `write`
+static method to dump the whole inventory back to Csv.
+
+```python
+from nornir import InitNornir
+from nornir.core.inventory import Host, Group
+from nornir_csv.plugins.inventory import CsvInventory
+from nornir.core.plugins.inventory import InventoryPluginRegister
+
+InventoryPluginRegister.register("CsvInventoryPlugin", CsvInventory)
+
+nr = InitNornir(config_file='sample_config.yaml')
+
+# Adding more data to existing inventory
+nr.inventory.hosts['R1'].data['status'] = 'up'
+nr.inventory.hosts['R2'].groups.append(Group(name='mygroup'))
+nr.inventory.hosts['R3'] = Host(name='R3')
+
+# Writing data back to CSV format. de
+CsvInventory.write(dest_file='./inventory/hosts.csv', inventory=nr.inventory)
+```
+
+This will result in a new hosts file:
+```csv
+name,hostname,username,password,port,platform,groups,custom_var,status
+R1,192.168.122.10,cisco,cisco,22,cisco_ios,core main,foo,up
+R2,192.168.122.20,cisco,cisco,22,cisco_xr,mygroup,bar,
+R3,,,,,,,,
+```

@@ -138,9 +138,9 @@ class CsvInventory:
         return Inventory(hosts=hosts, groups=groups, defaults=defaults)
 
     @staticmethod
-    def write(inventory: Inventory, directory: str ="./inventory/") -> None:
+    def write(inventory: Inventory, dest_file: str ="./inventory/hosts.csv") -> None:
         """Convert current Inventory back to CSV"""
-        CsvInventory._write_hosts(directory, inventory.hosts)
+        CsvInventory._write_hosts(dest_file, inventory.hosts)
 
     @staticmethod
     def _getfields(hosts: Hosts) -> list:
@@ -150,9 +150,9 @@ class CsvInventory:
         return list(set(fields))
 
     @staticmethod
-    def _write_hosts(dest_dir: str, hosts: Hosts) -> None:
+    def _write_hosts(dest_file: str, hosts: Hosts) -> None:
         """Write hosts dict back to file"""
-        with open(os.path.join(dest_dir,'hosts.csv'),'w') as f:
+        with open(dest_file,'w') as f:
             writer = csv.DictWriter(f,
                                     fieldnames=CsvInventory._getfields(hosts),
                                     extrasaction='ignore')
