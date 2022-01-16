@@ -15,9 +15,8 @@ import csv
 
 class CsvInventory:
     base_attributes = BaseAttributes.__slots__
-    extended_attributes = list(base_attributes)
-    extended_attributes.insert(0,'groups')
-    extended_attributes.insert(0,'name')
+    extended_attributes = ('name', 'hostname', 'username',
+                           'password', 'platform', 'groups', 'port')
 
     def __init__(self,
                  inventory_dir_path: str = "./inventory",
@@ -32,8 +31,30 @@ class CsvInventory:
         self.defaults_file = os.path.join(inventory_dir_path, defaults_file)
         self.connection_options = os.path.join(inventory_dir_path, options_file)
 
-        #self.extended_attributes = CsvInventory.extended_attributes
-        #self.extended_attributes.extend(['name','groups'])
+    @staticmethod
+    def _getfields(hosts: Hosts) -> list:
+        fields = list(CsvInventory.extended_attributes)
+        for host, host_data in hosts.items():
+            fields.extend([item for item in host_data.data])
+
+        # set completely breaks the fields ordering, use this instead
+        seen = set()
+        return [ field for field in fields if field not in seen and not seen.add(field) ]
+
+
+    @staticmethod
+    def _write_hosts(dest_file: str, hosts: Hosts) -> None:
+        """Write hosts dict back to file"""
+        with open(dest_file,'w') as f:
+            writer = csv.DictWriter(f,
+                                    fieldnames=CsvInventory._getfields(hosts),
+                                    extrasaction='ignore')
+            writer.writeheader()
+            for host, parameters in hosts.items():
+                host_dict = { **parameters.dict(), **parameters.dict()['data'] }
+                if host_dict.get('groups',False):
+                    host_dict['groups'] = " ".join(host_dict['groups'])
+                writer.writerow(host_dict)
 
     def _csv_to_dictlist(self, csv_file_name: str) -> List[Dict]:
         """Return list of dictionaries with data from csv file."""
@@ -144,30 +165,6 @@ class CsvInventory:
         """Convert current Inventory back to CSV"""
         CsvInventory._write_hosts(dest_file, inventory.hosts)
 
-    @staticmethod
-    def _getfields(hosts: Hosts) -> list:
-        fields = list(CsvInventory.extended_attributes)
-        for host, host_data in hosts.items():
-            fields.extend([item for item in host_data.data])
-
-        # set completely breaks the fields ordering, use this instead
-        seen = set()
-        return [ field for field in fields if field not in seen and not seen.add(field) ]
-
-
-    @staticmethod
-    def _write_hosts(dest_file: str, hosts: Hosts) -> None:
-        """Write hosts dict back to file"""
-        with open(dest_file,'w') as f:
-            writer = csv.DictWriter(f,
-                                    fieldnames=CsvInventory._getfields(hosts),
-                                    extrasaction='ignore')
-            writer.writeheader()
-            for host, parameters in hosts.items():
-                host_dict = { **parameters.dict(), **parameters.dict()['data'] }
-                if host_dict.get('groups',False):
-                    host_dict['groups'] = " ".join(host_dict['groups'])
-                writer.writerow(host_dict)
 
 if __name__ == '__main__':
     pass
