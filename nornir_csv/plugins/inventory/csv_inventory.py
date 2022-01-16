@@ -16,7 +16,8 @@ import csv
 class CsvInventory:
     base_attributes = BaseAttributes.__slots__
     extended_attributes = list(base_attributes)
-    extended_attributes.extend(['name','groups'])
+    extended_attributes.insert(0,'groups')
+    extended_attributes.insert(0,'name')
 
     def __init__(self,
                  inventory_dir_path: str = "./inventory",
@@ -31,8 +32,9 @@ class CsvInventory:
         self.defaults_file = os.path.join(inventory_dir_path, defaults_file)
         self.connection_options = os.path.join(inventory_dir_path, options_file)
 
-        self.extended_attributes = CsvInventory.extended_attributes
-        self.extended_attributes.extend(['name','groups'])
+        #self.extended_attributes = CsvInventory.extended_attributes
+        #self.extended_attributes.extend(['name','groups'])
+
     def _csv_to_dictlist(self, csv_file_name: str) -> List[Dict]:
         """Return list of dictionaries with data from csv file."""
         try:
@@ -147,7 +149,11 @@ class CsvInventory:
         fields = list(CsvInventory.extended_attributes)
         for host, host_data in hosts.items():
             fields.extend([item for item in host_data.data])
-        return list(set(fields))
+
+        # set completely breaks the fields ordering, use this instead
+        seen = set()
+        return [ field for field in fields if field not in seen and not seen.add(field) ]
+
 
     @staticmethod
     def _write_hosts(dest_file: str, hosts: Hosts) -> None:
