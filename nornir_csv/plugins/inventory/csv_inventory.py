@@ -6,15 +6,18 @@ from nornir.core.inventory import Groups
 from nornir.core.inventory import Group
 from nornir.core.inventory import Defaults
 from nornir.core.inventory import BaseAttributes
+from nornir.core.configuration import Config
 from typing import List, Dict, Tuple, Any
 import os
 import csv
 
 
-base_attributes = BaseAttributes.__slots__
-extended_attributes = list(base_attributes)
 
 class CsvInventory:
+    base_attributes = BaseAttributes.__slots__
+    extended_attributes = list(base_attributes)
+    extended_attributes.extend(['name','groups'])
+
     def __init__(self,
                  inventory_dir_path: str = "./inventory",
                  hosts_file: str = "hosts.csv",
@@ -28,9 +31,8 @@ class CsvInventory:
         self.defaults_file = os.path.join(inventory_dir_path, defaults_file)
         self.connection_options = os.path.join(inventory_dir_path, options_file)
 
-        self.extended_attributes = extended_attributes
+        self.extended_attributes = CsvInventory.extended_attributes
         self.extended_attributes.extend(['name','groups'])
-
     def _csv_to_dictlist(self, csv_file_name: str) -> List[Dict]:
         """Return list of dictionaries with data from csv file."""
         try:
@@ -109,7 +111,7 @@ class CsvInventory:
                 data_attributes = {}
                 group_name = group['name']
                 for attribute in list(group.keys()):
-                    if attribute not in base_attributes:
+                    if attribute not in CsvInventory.base_attributes:
                         data_attributes[attribute] = group.pop(attribute)
                 groups_data[group_name] =  Group(name=group_name, **group, data={**data_attributes})
         return hosts_data, groups_data
@@ -119,31 +121,14 @@ class CsvInventory:
         defaults_dict = {}
         # Check if defaults file is not empty
         if defaults != []:
-            for item in base_attributes:
+            for item in CsvInventory.base_attributes:
                 if item in defaults.keys():
                     defaults_dict[item] = defaults[item]
                     defaults.pop(item)
             defaults_dict['data'] = {**defaults}
         return Defaults(**defaults_dict)
 
-    def _getfields(self, hosts: Hosts) -> list:
-        fields = list(self.extended_attributes)
-        for host, host_data in hosts.items():
-            fields.extend([item for item in host_data.data])
-        return list(set(fields))
 
-    def _write_hosts(self, hosts: Hosts) -> None:
-        """Write hosts dict to file"""
-        with open(self.hosts_file,'w') as f:
-            writer = csv.DictWriter(f,
-                                    fieldnames=self._getfields(hosts),
-                                    extrasaction='ignore')
-            writer.writeheader()
-            for host, parameters in hosts.items():
-                host_dict = { **parameters.dict(), **parameters.dict()['data'] }
-                if host_dict.get('groups',False):
-                    host_dict['groups'] = " ".join(host_dict['groups'])
-                writer.writerow(host_dict)
 
     def load(self) -> Inventory:
         # Load data from three csv files as dict (hosts, groups,defaults)
@@ -152,10 +137,31 @@ class CsvInventory:
         # Pass dict to their respective function, generate Hosts, Groups and Defaults objects.
         return Inventory(hosts=hosts, groups=groups, defaults=defaults)
 
-    def unload(self, inventory: Inventory) -> None:
+    @staticmethod
+    def write(inventory: Inventory, directory: str ="./inventory/") -> None:
         """Convert current Inventory back to CSV"""
-        self._write_hosts(inventory.hosts)
+        CsvInventory._write_hosts(directory, inventory.hosts)
 
+    @staticmethod
+    def _getfields(hosts: Hosts) -> list:
+        fields = list(CsvInventory.extended_attributes)
+        for host, host_data in hosts.items():
+            fields.extend([item for item in host_data.data])
+        return list(set(fields))
+
+    @staticmethod
+    def _write_hosts(dest_dir: str, hosts: Hosts) -> None:
+        """Write hosts dict back to file"""
+        with open(os.path.join(dest_dir,'hosts.csv'),'w') as f:
+            writer = csv.DictWriter(f,
+                                    fieldnames=CsvInventory._getfields(hosts),
+                                    extrasaction='ignore')
+            writer.writeheader()
+            for host, parameters in hosts.items():
+                host_dict = { **parameters.dict(), **parameters.dict()['data'] }
+                if host_dict.get('groups',False):
+                    host_dict['groups'] = " ".join(host_dict['groups'])
+                writer.writerow(host_dict)
 
 if __name__ == '__main__':
     pass
