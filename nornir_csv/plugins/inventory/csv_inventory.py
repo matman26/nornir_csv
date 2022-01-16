@@ -127,10 +127,9 @@ class CsvInventory:
         return Defaults(**defaults_dict)
 
     def _getfields(self, hosts: Hosts) -> list:
-        fields = []
+        fields = list(self.extended_attributes)
         for host, host_data in hosts.items():
             fields.extend([item for item in host_data.data])
-
         return list(set(fields))
 
     def _write_hosts(self, hosts: Hosts) -> None:
@@ -140,8 +139,11 @@ class CsvInventory:
                                     fieldnames=self._getfields(hosts),
                                     extrasaction='ignore')
             writer.writeheader()
-            for host in hosts:
-                writer.writerow(hosts[host].dict())
+            for host, parameters in hosts.items():
+                host_dict = { **parameters.dict(), **parameters.dict()['data'] }
+                if host_dict.get('groups',False):
+                    host_dict['groups'] = " ".join(host_dict['groups'])
+                writer.writerow(host_dict)
 
     def load(self) -> Inventory:
         # Load data from three csv files as dict (hosts, groups,defaults)
