@@ -107,40 +107,19 @@ class CsvInventory:
                     host_dict['groups'] = " ".join(host_dict['groups'])
                 writer.writerow(host_dict)
 
-    def _csv_to_dictlist(self, csv_file_name: str) -> List[Dict]:
-        """Return list of dictionaries with data from csv file."""
-        try:
-            with open(csv_file_name,'r') as _f:
-                dict_reader = csv.DictReader(_f)
-                dict_list = list(dict_reader)
-        except FileNotFoundError:
-            dict_list = [{}]
-        except Exception as e:
-            raise e
-        return dict_list
-
-    def _read_groups_from_string(self, groupstring: str) -> List[str]:
-        """Convert a space-separated list of groups to python list"""
-        grouplist = groupstring.strip().split(' ')
-        return grouplist
-
-    # FIXME This could be a lambda but I'll leave it as a function for now
-    def _pop_dict_return(self,in_dict: Dict, key: str) -> Dict:
-        copied = in_dict.copy()
-        copied.pop(key)
-        return copied
-
-    def _organize_hosts_dictlist(self) -> List:
-        host_list = self._csv_to_dictlist(self.hosts_file)
+    def _organize_hosts_dictlist(self) -> List[Dict]:
+        host_list = csv_to_dictlist(self.hosts_file)
         for i, host in enumerate(host_list):
-            host, host['data'] = { key: host_list[i].get(key) for key in self.extended_attributes }, { key: host_list[i].get(key) for key in host if key not in self.extended_attributes }
-            #host['data'] = 
+            (host, host['data']) = ({ key: host_list[i].get(key)
+                                      for key in self.extended_attributes },
+                                    { key: host_list[i].get(key)
+                                      for key in host if key not in self.extended_attributes })
             host_list[i] = host
 
         return host_list
 
-    def _get_hosts_and_groups(self) -> Tuple[Hosts, Groups]:
-        #host_list = self._csv_to_dictlist(self.hosts_file)
+    def _get_hosts_and_groups(self, defaults: Defaults) -> Tuple[Hosts, Groups]:
+        # FIXME: This needs refactoring. Turn this into a function independent from class instance
         host_list = self._organize_hosts_dictlist()
         if host_list == []:
             raise Exception("NoHostsDefined")
@@ -202,7 +181,6 @@ class CsvInventory:
     def write(inventory: Inventory, dest_file: str ="./inventory/hosts.csv") -> None:
         """Convert current Inventory back to CSV"""
         CsvInventory._write_hosts(dest_file, inventory.hosts)
-
 
 if __name__ == '__main__':
     pass
