@@ -5,36 +5,87 @@ from nornir.core.inventory import Host
 from nornir.core.inventory import Groups
 from nornir.core.inventory import Group
 from nornir.core.inventory import Defaults
+from nornir.core.inventory import ConnectionOptions
 from nornir.core.inventory import BaseAttributes
-from nornir.core.configuration import Config
-from typing import List, Dict, Tuple, Any
+from nornir.core.inventory import HostOrGroup
+from typing import List, Dict, Tuple, Any, Type
 import os
 import csv
 
 
+def replace_empty_with_none(dict_list):
+    return_list = []
+    for element in dict_list:
+        return_list.append({ key: None if value == '' else value
+                             for key,value in element.items() })
+    return return_list
+
+def csv_to_dictlist(csv_file_name: str) -> List[Dict]:
+    """Return list of dictionaries with data from csv file."""
+    try:
+        with open(csv_file_name,'r') as _f:
+            dict_reader = csv.DictReader(_f)
+            dict_list = list(dict_reader)
+            # DictReader by default reads empty fields as '' which
+            # blocks defaults from loading properly...
+            dict_list = replace_empty_with_none(dict_list)
+    except FileNotFoundError:
+        dict_list = [{}]
+    except Exception as e:
+        raise e
+    return dict_list
+
+def get_defaults_from_file(defaults_file: str) -> Defaults:
+    defaults = csv_to_dictlist(defaults_file)[0]
+    defaults_dict = {}
+    if defaults != []:
+        for item in CsvInventory.base_attributes:
+            if item in defaults.keys():
+                defaults_dict[item] = defaults[item]
+                defaults.pop(item)
+        defaults_dict['data'] = {**defaults}
+    return Defaults(**defaults_dict)
+
+def read_groups_from_string(groupstring: str) -> List[str]:
+    """Convert a space-separated list of groups to python list"""
+    grouplist = groupstring.strip().split(' ')
+    return grouplist
 
 class CsvInventory:
     base_attributes = BaseAttributes.__slots__
     extended_attributes = ('name', 'hostname', 'username',
                            'password', 'platform', 'groups', 'port')
-
     def __init__(self,
                  inventory_dir_path: str = "./inventory",
                  hosts_file: str = "hosts.csv",
                  groups_file: str = "groups.csv",
                  defaults_file: str = "defaults.csv",
-                 options_file: str = "connection_options.csv"
+                 connection_options_file: str = "connection_options.csv"
                  ) -> None:
+        """
+        CsvInventory is a flexible csv-based inventory plugin for Nornir. Hosts,
+        Groups, Defaults and Connection Options are each represented by separate
+        csv files.
+
+        Args:
+
+          inventory_dir_path: Path to the directory where inventory files are located
+          hosts_file: Filename with extension to the hosts file in csv format
+          groups_file: Filename with extension to the groups file in csv format
+          defaults_file: Filename with extension to the defaults file in csv format
+          connection_options_file: Filename with extension to the connection
+              options file in csv format
+        """
         self.inventory_dir_path = inventory_dir_path
         self.hosts_file = os.path.join(inventory_dir_path, hosts_file)
-        self.groups_file = os.path.join(inventory_dir_path, groups_file) 
+        self.groups_file = os.path.join(inventory_dir_path, groups_file)
         self.defaults_file = os.path.join(inventory_dir_path, defaults_file)
-        self.connection_options = os.path.join(inventory_dir_path, options_file)
+        self.connection_options = os.path.join(inventory_dir_path, connection_options_file)
 
     @staticmethod
     def _getfields(hosts: Hosts) -> list:
         fields = list(CsvInventory.extended_attributes)
-        for host, host_data in hosts.items():
+        for host_data in hosts.values():
             fields.extend([item for item in host_data.data])
 
         # set completely breaks the fields ordering, use this instead
