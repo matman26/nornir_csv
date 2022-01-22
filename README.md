@@ -123,7 +123,7 @@ nr.inventory.hosts['R1'].data['status'] = 'up'
 nr.inventory.hosts['R2'].groups.append(Group(name='mygroup'))
 nr.inventory.hosts['R3'] = Host(name='R3')
 
-# Writing data back to CSV format. de
+# Writing data back to CSV format.
 CsvInventory.write(dest_file='./inventory/hosts.csv', inventory=nr.inventory)
 ```
 
