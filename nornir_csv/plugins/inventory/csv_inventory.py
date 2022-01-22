@@ -101,18 +101,18 @@ class CsvInventory:
                 host['groups'] = [
                     Group(name=groupname)
                     for groupname
-                    in self._read_groups_from_string(host['groups']) ]
+                    in read_groups_from_string(host['groups']) ]
 
                 host_groupslist.extend(host['groups'])
-        
         # Create Hosts dict-like object (key is name, value is Host(**kwargs))
-        hosts_data = Hosts({item['name']: Host(**item) for item in host_list })
+        hosts_data = Hosts({item['name']: Host(**item,defaults=defaults)
+                            for item in host_list })
 
         # Enforce unicity as initial list can contain duplicates
         host_groupslist = list(set(host_groupslist))
 
         # Gather groups from CSV file
-        group_list = self._csv_to_dictlist(self.groups_file)
+        group_list = csv_to_dictlist(self.groups_file)
 
         groups_data = Groups()
         # Check if any groups were read from csv file
@@ -125,7 +125,7 @@ class CsvInventory:
                 # If a grouplist was found from hosts, simply populate their names without any
                 # other attributes
                 for group in host_groupslist:
-                    groups_data[group] = Group(name=group)
+                    groups_data[group] = Group(name=group,defaults=defaults)
         else:
             # If groups were read, do some dict unpacking to pass attributes to the Group class,
             # build Groups dict
@@ -136,27 +136,14 @@ class CsvInventory:
                 for attribute in list(group.keys()):
                     if attribute not in CsvInventory.base_attributes:
                         data_attributes[attribute] = group.pop(attribute)
-                groups_data[group_name] =  Group(name=group_name, **group, data={**data_attributes})
+                groups_data[group_name] =  Group(name=group_name, **group, defaults=defaults, data={**data_attributes})
         return hosts_data, groups_data
-
-    def _get_defaults(self) -> Defaults:
-        defaults = self._csv_to_dictlist(self.defaults_file)[0]
-        defaults_dict = {}
-        # Check if defaults file is not empty
-        if defaults != []:
-            for item in CsvInventory.base_attributes:
-                if item in defaults.keys():
-                    defaults_dict[item] = defaults[item]
-                    defaults.pop(item)
-            defaults_dict['data'] = {**defaults}
-        return Defaults(**defaults_dict)
-
 
 
     def load(self) -> Inventory:
         # Load data from three csv files as dict (hosts, groups,defaults)
-        hosts, groups = self._get_hosts_and_groups()
-        defaults = self._get_defaults()
+        defaults = get_defaults_from_file(self.defaults_file)
+        hosts, groups = self._get_hosts_and_groups(defaults=defaults)
         # Pass dict to their respective function, generate Hosts, Groups and Defaults objects.
         return Inventory(hosts=hosts, groups=groups, defaults=defaults)
 
