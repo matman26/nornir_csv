@@ -52,6 +52,27 @@ def get_defaults_from_file(defaults_file: str) -> Defaults:
         defaults_dict['data'] = {**defaults}
     return Defaults(**defaults_dict)
 
+def get_connection_options_from_file(connection_options_file: str) -> Dict[str,ConnectionOptions]:
+    options = csv_to_dictlist(connection_options_file)
+    if options == [{}]:
+        return {}
+
+    options_dict = {}
+    for co in options:
+        if co.get('name',False):
+            name = co.pop('name')
+            options_dict[name] = {}
+            for item in CsvInventory.base_attributes:
+                if item in co.keys():
+                    options_dict[name][item] = co[item]
+                    co.pop(item)
+            options_dict[name]['extras'] = {**co}
+            options_dict[name] = ConnectionOptions(**options_dict[name])
+        else:
+            continue
+
+    return options_dict
+
 def read_groups_from_string(groupstring: str) -> List[str]:
     """Convert a space-separated list of groups to python list"""
     grouplist = groupstring.strip().split(' ')
@@ -128,7 +149,7 @@ class CsvInventory:
             host_list[i] = host
         return host_list
 
-    def _get_hosts_and_groups(self, defaults: Defaults) -> Tuple[Hosts, ParentGroups]:
+    def _get_hosts_and_groups(self) -> Tuple[Hosts, ParentGroups]:
         # FIXME: This needs refactoring. Turn this into a function independent
         # from class instance
         host_list = self._organize_hosts_dictlist()
