@@ -101,6 +101,25 @@ message_of_the_day,foo,port
 hello world!,bar,22
 ```
 
+### Connection Options (Experimental)
+Connection options can be defined using CSV syntax on a separate file, `options_file`.
+The default name for the file is 'connection_options.csv'. CSV syntax can be used to
+specify connection options for all connectivity plugins as you would using YAML. As
+usual, attributes that do not map to nornir base attributes will be put inside
+the 'extras' dictionary for the ConnectionOptions object; this is the behaviour
+you'd usually need.
+
+Even if you can define connection options for several plugins at once, it is
+recommended to only define one set of connection options at a time (i.e. only napalm,
+only netmiko or only scrapli), as some configurations can potentially conflict 
+with each other.
+
+```csv
+name,ssh_strict,ssh_config_file,hostkey_verify
+netmiko,False,~/.ssh/config,False
+napalm,True,~/.ssh/config,True
+```
+
 ## Writing Changes back to CSV
 It may be possible you want to update your inventory programatically after running some
 tests. During execution, all the hosts on your inventory are available and can be appended
