@@ -1,5 +1,5 @@
 """Reads CSV file as a Nornir inventory."""
-from nornir.core.inventory import Inventory
+from nornir.core.inventory import Inventory, ParentGroups
 from nornir.core.inventory import Hosts
 from nornir.core.inventory import Host
 from nornir.core.inventory import Groups
@@ -7,11 +7,9 @@ from nornir.core.inventory import Group
 from nornir.core.inventory import Defaults
 from nornir.core.inventory import ConnectionOptions
 from nornir.core.inventory import BaseAttributes
-from nornir.core.inventory import HostOrGroup
-from typing import List, Dict, Tuple, Any, Type
+from typing import List, Dict, Tuple
 import os
 import csv
-
 
 def replace_empty_with_none(dict_list):
     return_list = []
@@ -34,14 +32,14 @@ def csv_to_dictlist(csv_file_name: str) -> List[Dict]:
             dict_list = replace_empty_with_none(dict_list)
     except FileNotFoundError:
         dict_list = [{}]
-    except Exception as e:
-        raise e
     return dict_list
 
 def get_defaults_from_file(defaults_file: str) -> Defaults:
     defaults = csv_to_dictlist(defaults_file)[0]
+    if defaults == [{}]:
+        return Defaults()
     defaults_dict = {}
-    if defaults != []:
+    if defaults != [{}]:
         for item in CsvInventory.base_attributes:
             if item in defaults.keys():
                 defaults_dict[item] = defaults[item]
@@ -52,6 +50,8 @@ def get_defaults_from_file(defaults_file: str) -> Defaults:
 def read_groups_from_string(groupstring: str) -> List[str]:
     """Convert a space-separated list of groups to python list"""
     grouplist = groupstring.strip().split(' ')
+    if isinstance(grouplist, str):
+        grouplist = [ grouplist ]
     return grouplist
 
 class CsvInventory:
