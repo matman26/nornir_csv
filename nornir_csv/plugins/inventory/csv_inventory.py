@@ -68,7 +68,7 @@ class CsvInventory:
                  hosts_file: str = "hosts.csv",
                  groups_file: str = "groups.csv",
                  defaults_file: str = "defaults.csv",
-                 connection_options_file: str = "connection_options.csv"
+                 options_file: str = "connection_options.csv"
                  ) -> None:
         """
         CsvInventory is a flexible csv-based inventory plugin for Nornir. Hosts,
@@ -88,7 +88,9 @@ class CsvInventory:
         self.hosts_file = os.path.join(inventory_dir_path, hosts_file)
         self.groups_file = os.path.join(inventory_dir_path, groups_file)
         self.defaults_file = os.path.join(inventory_dir_path, defaults_file)
-        self.connection_options = os.path.join(inventory_dir_path, connection_options_file)
+        self.options_file = os.path.join(inventory_dir_path, options_file)
+        self.defaults = get_defaults_from_file(self.defaults_file)
+        self.connection_options = get_connection_options_from_file(self.options_file)
 
     @staticmethod
     def _getfields(hosts: Hosts) -> list:
@@ -145,7 +147,8 @@ class CsvInventory:
                         data_attributes[attribute] = group.pop(attribute)
                 groups_data[group_name] =  Group(name=group_name,
                                                     **group,
-                                                    defaults=defaults,
+                                                    defaults=self.defaults,
+                                                    connection_options=self.connection_options,
                                                     data={**data_attributes})
 
         # Convert group string (space-separated) into group list for all hosts
@@ -163,7 +166,8 @@ class CsvInventory:
                     in read_groups_from_string(host['groups']) ])
 
         # Create Hosts dict-like object (key is name, value is Host(**kwargs))
-        hosts_data = Hosts({item['name']: Host(**item,defaults=defaults)
+        hosts_data = Hosts({item['name']: Host(**item,defaults=self.defaults,
+                                               connection_options=self.connection_options)
                             for item in host_list })
 
         # Enforce unicity as initial list can contain duplicates
@@ -177,11 +181,12 @@ class CsvInventory:
 
     def load(self) -> Inventory:
         # Load data from three csv files as dict (hosts, groups,defaults)
-        defaults = get_defaults_from_file(self.defaults_file)
-        hosts, groups = self._get_hosts_and_groups(defaults=defaults)
+        #connection_options = get_connection_options_from_file(self.options_file)
+        hosts, groups = self._get_hosts_and_groups()
+
         # Pass dict to their respective function, generate Hosts,
         # Groups and Defaults objects.
-        return Inventory(hosts=hosts, groups=groups, defaults=defaults)
+        return Inventory(hosts=hosts, groups=groups, defaults=self.defaults)
 
     @staticmethod
     def write(inventory: Inventory,
