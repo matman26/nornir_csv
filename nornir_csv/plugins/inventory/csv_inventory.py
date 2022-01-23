@@ -22,6 +22,9 @@ def replace_empty_with_none(dict_list):
 
 def csv_to_dictlist(csv_file_name: str) -> List[Dict]:
     """Return list of dictionaries with data from csv file."""
+    if not os.path.exists(csv_file_name):
+        return [{}]
+
     try:
         with open(csv_file_name,'r') as _f:
             dict_reader = csv.DictReader(_f)
@@ -90,8 +93,8 @@ class CsvInventory:
 
         # set completely breaks the fields ordering, use this instead
         seen = set()
-        return [ field for field in fields if field not in seen and not seen.add(field) ]
-
+        return [ field
+                 for field in fields if field not in seen and not seen.add(field) ]
 
     @staticmethod
     def _write_hosts(dest_file: str, hosts: Hosts) -> None:
@@ -113,60 +116,57 @@ class CsvInventory:
             (host, host['data']) = ({ key: host_list[i].get(key)
                                       for key in self.extended_attributes },
                                     { key: host_list[i].get(key)
-                                      for key in host if key not in self.extended_attributes })
+                                      for key in host if key
+                                      not in self.extended_attributes })
             host_list[i] = host
-
         return host_list
 
-    def _get_hosts_and_groups(self, defaults: Defaults) -> Tuple[Hosts, Groups]:
-        # FIXME: This needs refactoring. Turn this into a function independent from class instance
+    def _get_hosts_and_groups(self, defaults: Defaults) -> Tuple[Hosts, ParentGroups]:
+        # FIXME: This needs refactoring. Turn this into a function independent
+        # from class instance
         host_list = self._organize_hosts_dictlist()
         if host_list == []:
             raise Exception("NoHostsDefined")
 
-        # Convert group string (space-separated) into group list for all hosts
-        host_groupslist = []
-        for host in host_list:
-            if host.get('groups'):
-                host['groups'] = [
-                    Group(name=groupname)
-                    for groupname
-                    in read_groups_from_string(host['groups']) ]
-
-                host_groupslist.extend(host['groups'])
-        # Create Hosts dict-like object (key is name, value is Host(**kwargs))
-        hosts_data = Hosts({item['name']: Host(**item,defaults=defaults)
-                            for item in host_list })
-
-        # Enforce unicity as initial list can contain duplicates
-        host_groupslist = list(set(host_groupslist))
-
         # Gather groups from CSV file
         group_list = csv_to_dictlist(self.groups_file)
-
         groups_data = Groups()
-        # Check if any groups were read from csv file
-        if group_list == [{}]:
-            # Check if any group was read from a host instead of the csv
-            if host_groupslist == []:
-                # If no grouplist was found on hosts, there are no groups defined.
-                pass
-            else:
-                # If a grouplist was found from hosts, simply populate their names without any
-                # other attributes
-                for group in host_groupslist:
-                    groups_data[group] = Group(name=group,defaults=defaults)
-        else:
-            # If groups were read, do some dict unpacking to pass attributes to the Group class,
-            # build Groups dict
-            groups_data = Groups()
+        if group_list != [{}]:
             for group in group_list:
                 data_attributes = {}
                 group_name = group['name']
                 for attribute in list(group.keys()):
                     if attribute not in CsvInventory.base_attributes:
                         data_attributes[attribute] = group.pop(attribute)
-                groups_data[group_name] =  Group(name=group_name, **group, defaults=defaults, data={**data_attributes})
+                groups_data[group_name] =  Group(name=group_name,
+                                                    **group,
+                                                    defaults=defaults,
+                                                    data={**data_attributes})
+
+        # Convert group string (space-separated) into group list for all hosts
+        host_groupslist = []
+        for host in host_list:
+            if host.get('groups'):
+                host_groupslist.extend(host['groups'])
+                host['groups'] = ParentGroups([
+                    #groupname
+                    #Group(**groups_data.get(groupname,{'name':groupname}))
+                    Group(**groups_data[groupname].dict())
+                    if groups_data.get(groupname)
+                    else Group(name=groupname)
+                    for groupname
+                    in read_groups_from_string(host['groups']) ])
+
+        # Create Hosts dict-like object (key is name, value is Host(**kwargs))
+        hosts_data = Hosts({item['name']: Host(**item,defaults=defaults)
+                            for item in host_list })
+
+        # Enforce unicity as initial list can contain duplicates
+        host_groupslist = list(set(host_groupslist))
+        if groups_data == {}:
+            groups_data = ParentGroups([ Group(name=groupname)
+                                         for groupname in host_groupslist])
+
         return hosts_data, groups_data
 
 
@@ -174,11 +174,13 @@ class CsvInventory:
         # Load data from three csv files as dict (hosts, groups,defaults)
         defaults = get_defaults_from_file(self.defaults_file)
         hosts, groups = self._get_hosts_and_groups(defaults=defaults)
-        # Pass dict to their respective function, generate Hosts, Groups and Defaults objects.
+        # Pass dict to their respective function, generate Hosts,
+        # Groups and Defaults objects.
         return Inventory(hosts=hosts, groups=groups, defaults=defaults)
 
     @staticmethod
-    def write(inventory: Inventory, dest_file: str ="./inventory/hosts.csv") -> None:
+    def write(inventory: Inventory,
+              dest_file: str = "./inventory/hosts.csv") -> None:
         """Convert current Inventory back to CSV"""
         CsvInventory._write_hosts(dest_file, inventory.hosts)
 
