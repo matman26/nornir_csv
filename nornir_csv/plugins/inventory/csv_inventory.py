@@ -11,33 +11,38 @@ from typing import List, Dict, Tuple
 import os
 import csv
 
-def replace_empty_with_none(dict_list):
-    return_list = []
+def sanitize_dictlist(dict_list):
+    """Do some cleanup. String 'True' and 'False' must be
+    interpreted as bool values. Empty string should evaluate
+    to None."""
     for element in dict_list:
-        return_list.append({ key: None if value == '' else value
-                             for key,value in element.items() })
-    return return_list
+        for key,value in element.items():
+            if   value == 'False': element[key] = False
+            if   value == 'True' : element[key] = True
+            if   value == ''     : element[key] = None
+            else: element[key] = element[key]
+    return dict_list
 
 def csv_to_dictlist(csv_file_name: str) -> List[Dict]:
     """Return list of dictionaries with data from csv file."""
     if not os.path.exists(csv_file_name):
         return [{}]
-
     try:
         with open(csv_file_name,'r') as _f:
             dict_reader = csv.DictReader(_f)
             dict_list = list(dict_reader)
             # DictReader by default reads empty fields as '' which
             # blocks defaults from loading properly...
-            dict_list = replace_empty_with_none(dict_list)
+            dict_list = sanitize_dictlist(dict_list)
     except FileNotFoundError:
         dict_list = [{}]
     return dict_list
 
 def get_defaults_from_file(defaults_file: str) -> Defaults:
     defaults = csv_to_dictlist(defaults_file)[0]
-    if defaults == [{}]:
+    if defaults == {}:
         return Defaults()
+
     defaults_dict = {}
     if defaults != [{}]:
         for item in CsvInventory.base_attributes:
