@@ -1,13 +1,15 @@
 # nornir_csv
 [![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/matman26/nornir_csv)
 
-Use CSV files as a Nornir Inventory source with hosts, groups and defaults.
+Use CSV files as a Nornir Inventory source with hosts, groups, defaults and
+connection_options.
 This can be used as an equivalent to the Simple Inventory plugin but 
-using CSV files instead of YAML. This does not generate any new files,
-but instead reads host data from three files:
+using CSV files instead of YAML. 
+The plugin can read from four different csv files:
 + hosts.csv
 + groups.csv
 + defaults.csv
++ connection_options.csv
 
 ## Installation
 Install the [package](https://pypi.org/project/nornir-csv/) from PyPi with pip.
@@ -30,7 +32,8 @@ InventoryPluginRegister.register("CsvInventoryPlugin", CsvInventory)
 nr = InitNornir(config_file='sample_config.yaml')
 ```
 
-By default, the plugin will look for the files hosts.csv, groups.csv and defaults.csv inside the 
+By default, the plugin will look for the files hosts.csv, groups.csv, defaults.csv and
+connection_options.csv inside the 
 ./inventory/ directory, but the directory can be changed by specifying the plugin option 
 `inventory_dir_path`. A sample file such as below can be used:
 
@@ -39,13 +42,16 @@ inventory:
   plugin: CsvInventoryPlugin
   options:
     inventory_dir_path: /path/to/inventory/dir/
+    hosts_file: hosts.txt
 runner:
   plugin: threaded
   options:
     num_workers: 20
 ```
 
-The name of the csv files to be read for hosts, groups and defaults can also be customized by setting the options `hosts_file`, `groups_file` and `defaults_file`, respectively. These should correspond to the file's basenames (no paths) with extension, if any.
+The name of the csv files to be read for hosts, groups, defaults and connection options can also 
+be customized by setting the options `hosts_file`, `groups_file` , `defaults_file` and `options_file`,
+respectively. These should correspond to the file's basenames (no paths) with extension, if any.
 
 ## CSV Syntax
 ### Hosts
@@ -120,7 +126,7 @@ netmiko,False,~/.ssh/config,False
 napalm,True,~/.ssh/config,True
 ```
 
-## Writing Changes back to CSV
+## Writing Changes back to CSV (Experimental)
 It may be possible you want to update your inventory programatically after running some
 tests. During execution, all the hosts on your inventory are available and can be appended
 data in their 'data' dictionaries. You can also create new hosts and add existing ones to
@@ -140,7 +146,8 @@ nr = InitNornir(config_file='sample_config.yaml')
 # Adding more data to existing inventory
 nr.inventory.hosts['R1'].data['status'] = 'up'
 nr.inventory.hosts['R2'].groups.append(Group(name='mygroup'))
-nr.inventory.hosts['R3'] = Host(name='R3')
+nr.inventory.hosts['R3'] = Host(name='R3',hostname='192.168.122.30',
+                                platform='cisco_xe',)
 
 # Writing data back to CSV format.
 CsvInventory.write(dest_file='./inventory/hosts.csv', inventory=nr.inventory)
@@ -151,5 +158,5 @@ This will result in a new hosts file:
 name,hostname,username,password,port,platform,groups,custom_var,status
 R1,192.168.122.10,cisco,cisco,22,cisco_ios,core main,foo,up
 R2,192.168.122.20,cisco,cisco,22,cisco_xr,mygroup,bar,
-R3,,,,,,,,
+R3,192.168.122.30,,,,cisco_xe,,,
 ```
