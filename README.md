@@ -2,7 +2,7 @@
 [![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/matman26/nornir_csv)
 
 Use CSV files as a Nornir Inventory source with hosts, groups, defaults and
-connection_options.
+connection options.
 This can be used as an equivalent to the Simple Inventory plugin but 
 using CSV files instead of YAML. 
 The plugin can read from four different csv files:
