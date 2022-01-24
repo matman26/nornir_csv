@@ -42,7 +42,6 @@ inventory:
   plugin: CsvInventoryPlugin
   options:
     inventory_dir_path: /path/to/inventory/dir/
-    hosts_file: hosts.txt
 runner:
   plugin: threaded
   options:
